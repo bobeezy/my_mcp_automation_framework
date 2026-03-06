@@ -151,6 +151,18 @@ npm test
 npm run test:web
 ```
 
+### Run web tests in headless mode (default)
+
+```bash
+npx playwright test tests/web --project=web-chromium
+```
+
+### Run web tests in headed mode (browser UI visible)
+
+```bash
+npx playwright test tests/web --project=web-chromium --headed
+```
+
 ### Run only API tests
 
 ```bash
