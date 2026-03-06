@@ -1,0 +1,25 @@
+{
+  "name": "my_mcp_automation_framework",
+  "version": "1.0.0",
+  "description": "AI-assisted test automation framework using **Playwright + JavaScript** and a **Playwright MCP server** workflow to help generate test cases from Jira tickets.",
+  "scripts": {
+    "test": "playwright test",
+    "test:web": "playwright test tests/web",
+    "test:api": "playwright test tests/api",
+    "test:headed": "playwright test --headed",
+    "report:playwright": "playwright show-report",
+    "report:allure:generate": "allure generate ./allure-results --clean -o ./allure-report",
+    "report:allure:open": "allure open ./allure-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "allure-commandline": "^2.37.0",
+    "allure-playwright": "^3.5.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
+}

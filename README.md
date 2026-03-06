@@ -1,23 +1,69 @@
 # MCP Automation Framework
 
-AI-assisted test automation framework using **Playwright + JavaScript** and a **Playwright MCP server** workflow to help generate test cases from Jira tickets.
+Playwright + JavaScript test automation framework for:
 
-## What this project covers
+- Web login validation (positive and negative)
+- API login validation (positive and negative)
+- API user CRUD coverage (`POST`, `GET`, `PUT`, `DELETE`)
+- Rich reporting with Playwright HTML + Allure attachments
 
-- Basic API automation for a Login domain using:
-  - `POST` (create/login)
-  - `GET` (read user/session/profile)
-  - `PUT` (update user/session settings)
-  - `DELETE` (cleanup/delete test data)
-- Playwright test execution (`@playwright/test`)
-- MCP-driven test design flow (read Jira ticket -> derive scenarios -> create test cases)
+## What is implemented
 
-## Recommended project structure
+### Web automation (Page Object Model)
 
-Use this structure as a starting point:
+- Public test page: `https://the-internet.herokuapp.com/login`
+- POM class: `pages/LoginPage.js`
+- Web tests: `tests/web/login.web.spec.js`
+  - Positive login with valid credentials
+  - Negative login with invalid password
+  - `test.step(...)` for step-level traceability in reports
+  - Screenshot attached after each test (last executed step)
+  - On failure: failure-point screenshot + failure details attachment
+- Shared web hook registration:
+  - `hooks/WebHooks.js`
+  - `fixtures/webTest.js`
+
+### API automation
+
+- Public API: `https://dummyjson.com`
+- Login tests: `tests/api/login.api.spec.js`
+  - Positive login returns tokens
+  - Negative login returns proper error
+- User CRUD tests: `tests/api/user.crud.api.spec.js`
+  - `POST /users/add`
+  - `GET /users/{id}`
+  - `PUT /users/{id}`
+  - `DELETE /users/{id}`
+- Shared API hook registration:
+  - `hooks/ApiHooks.js`
+  - `fixtures/apiTest.js`
+
+### Reporting
+
+- `playwright-report/`: Playwright HTML report
+- `allure-results/`: raw Allure result files
+- `allure-report/`: generated Allure report
+- API request/response attachments are created by `utils/apiReporter.js`:
+  - method, URL, headers, params, body
+  - response status, headers, body
+
+## Project structure
 
 ```text
 my_mcp_automation_framework/
+  data/
+    credentials/
+      .env.credentials
+    web/
+      login.json
+    api/
+      login.json
+  hooks/
+    WebHooks.js
+    ApiHooks.js
+  fixtures/
+    webTest.js
+    apiTest.js
   pages/
     LoginPage.js
   tests/
@@ -25,331 +71,285 @@ my_mcp_automation_framework/
       login.web.spec.js
     api/
       login.api.spec.js
-  test-data/
-    users.json
+      user.crud.api.spec.js
   utils/
+    apiReporter.js
     env.js
-    apiClient.js
-  fixtures/
-    auth.fixture.js
-  playwright-report/
-  test-results/
   playwright.config.js
   package.json
-  .env
-  .env.example
   README.md
-```
-
-### Page Object Model (Web)
-
-Follow Page Object Model for web tests:
-
-- Keep selectors and page actions in `pages/`.
-- Keep assertions and scenarios in `tests/web/`.
-- Keep API checks in `tests/api/`.
-- Reuse shared test data from `test-data/`.
-
-Example mapping:
-
-```text
-pages/LoginPage.js              -> page locators + actions (goto, login, validation helpers)
-tests/web/login.web.spec.js     -> web test cases using LoginPage
-tests/api/login.api.spec.js     -> API test cases (POST, GET, PUT, DELETE)
-fixtures/auth.fixture.js        -> shared auth/session fixtures (optional)
 ```
 
 ## Prerequisites
 
 - Node.js 18+
-- npm or yarn
-- Playwright installed in the project
-- Access to your API environment (base URL + credentials)
-- Access to Jira (for ticket-based test case generation workflow)
-- Playwright MCP server configured in your Cursor/agent environment
+- npm
 
 ## Setup
 
-1. Initialize the project (if not already done):
+1. Install dependencies:
 
 ```bash
-npm init -y
-npm i -D @playwright/test
-npx playwright install
+npm install
 ```
 
-1. Add environment variables in `.env`:
+1. Install Playwright browser(s):
 
 ```bash
-API_BASE_URL=https://your-api-host.com
-LOGIN_EMAIL=test.user@example.com
-LOGIN_PASSWORD=your_password
+npx playwright install chromium
 ```
 
-1. Add scripts in `package.json`:
+1. Update environment values in `data/credentials/.env.credentials` if needed.
 
-```json
-{
-  "scripts": {
-    "test:api": "playwright test tests/api",
-    "test:api:headed": "playwright test tests/api --headed",
-    "test:api:debug": "PWDEBUG=1 playwright test tests/api"
-  }
-}
-```
+## Environment file (`data/credentials/.env.credentials`)
 
-## Playwright config (API-focused)
+The framework loads environment data from `data/credentials/.env.credentials` by default.
+Credentials are not hardcoded in test files; tests fail fast if required env values are missing.
+Env validation helper is centralized in `utils/env.js` (`getRequiredEnv`) to enforce this behavior.
 
-Create `playwright.config.js`:
-
-```js
-// @ts-check
-const { defineConfig } = require('@playwright/test');
-
-module.exports = defineConfig({
-  testDir: './tests',
-  timeout: 30_000,
-  fullyParallel: false,
-  reporter: [['list'], ['html', { open: 'never' }]],
-  use: {
-    baseURL: process.env.API_BASE_URL,
-    extraHTTPHeaders: {
-      Accept: 'application/json'
-    }
-  }
-});
-```
-
-## Basic Login API tests (POST, GET, PUT, DELETE)
-
-Create `tests/api/login.api.spec.js`:
-
-```js
-const { test, expect, request } = require('@playwright/test');
-
-test.describe('Login API - basic CRUD-style checks', () => {
-  let apiContext;
-  let authToken;
-  let userId;
-
-  test.beforeAll(async () => {
-    apiContext = await request.newContext({
-      baseURL: process.env.API_BASE_URL
-    });
-  });
-
-  test.afterAll(async () => {
-    await apiContext.dispose();
-  });
-
-  test('POST /login - authenticate user', async () => {
-    const response = await apiContext.post('/login', {
-      data: {
-        email: process.env.LOGIN_EMAIL,
-        password: process.env.LOGIN_PASSWORD
-      }
-    });
-
-    expect(response.ok()).toBeTruthy();
-    expect(response.status()).toBe(200);
-
-    const body = await response.json();
-    expect(body.token).toBeTruthy();
-    expect(body.user).toBeTruthy();
-
-    authToken = body.token;
-    userId = body.user.id;
-  });
-
-  test('GET /users/{id} - fetch logged-in user profile', async () => {
-    const response = await apiContext.get(`/users/${userId}`, {
-      headers: { Authorization: `Bearer ${authToken}` }
-    });
-
-    expect(response.ok()).toBeTruthy();
-    expect(response.status()).toBe(200);
-
-    const body = await response.json();
-    expect(body.id).toBe(userId);
-    expect(body.email).toBe(process.env.LOGIN_EMAIL);
-  });
-
-  test('PUT /users/{id} - update user metadata', async () => {
-    const response = await apiContext.put(`/users/${userId}`, {
-      headers: { Authorization: `Bearer ${authToken}` },
-      data: {
-        displayName: 'Playwright API User'
-      }
-    });
-
-    expect(response.ok()).toBeTruthy();
-    expect([200, 204]).toContain(response.status());
-  });
-
-  test('DELETE /sessions/current - logout / cleanup session', async () => {
-    const response = await apiContext.delete('/sessions/current', {
-      headers: { Authorization: `Bearer ${authToken}` }
-    });
-
-    expect(response.ok()).toBeTruthy();
-    expect([200, 202, 204]).toContain(response.status());
-  });
-});
-```
-
-> Note: Endpoint paths differ by application. Replace `/login`, `/users/{id}`, and `/sessions/current` with your real API routes.
-
-## Basic Login Web tests (Playwright)
-
-Create `tests/web/login.web.spec.js`:
-
-```js
-const { test, expect } = require('@playwright/test');
-
-test.describe('Login Web', () => {
-  test('user logs in with valid credentials', async ({ page }) => {
-    await page.goto('/login');
-
-    await page.getByLabel('Email').fill(process.env.LOGIN_EMAIL);
-    await page.getByLabel('Password').fill(process.env.LOGIN_PASSWORD);
-    await page.getByRole('button', { name: /log in|sign in/i }).click();
-
-    await expect(page).toHaveURL(/dashboard|home/);
-    await expect(page.getByText(/welcome|dashboard/i)).toBeVisible();
-  });
-
-  test('error shown for invalid password', async ({ page }) => {
-    await page.goto('/login');
-
-    await page.getByLabel('Email').fill(process.env.LOGIN_EMAIL);
-    await page.getByLabel('Password').fill('wrong-password');
-    await page.getByRole('button', { name: /log in|sign in/i }).click();
-
-    await expect(page.getByText(/invalid credentials|incorrect password/i)).toBeVisible();
-  });
-
-  test('required field validation is displayed', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('button', { name: /log in|sign in/i }).click();
-
-    await expect(page.getByText(/email is required|password is required/i)).toBeVisible();
-  });
-});
-```
-
-### Web-specific config notes
-
-For web tests, set `baseURL` in `playwright.config.js` to your web app URL (for example `https://your-web-app.com`), and keep credentials in `.env`.
-
-You can run only web tests with:
+Current sample values:
 
 ```bash
-npx playwright test tests/web
+WEB_BASE_URL=https://the-internet.herokuapp.com
+WEB_LOGIN_USERNAME=tomsmith
+WEB_LOGIN_PASSWORD=SuperSecretPassword!
+
+API_BASE_URL=https://dummyjson.com
+API_LOGIN_USERNAME=emilys
+API_LOGIN_PASSWORD=emilyspass
 ```
 
-You can run both API and web tests with:
+To run against another environment file, use `ENV_FILE`:
 
 ```bash
-npx playwright test tests
+ENV_FILE=data/credentials/.env.staging.credentials npx playwright test
 ```
 
-### Suggested Login web test cases
+## Test data files
 
-- Successful login redirects user to dashboard/home.
-- Invalid password shows authentication error message.
-- Unknown user shows account-not-found or generic auth error.
-- Empty fields show required field validation.
-- Password field masks typed input.
-- Session persists after page refresh (if expected by product).
-- Logout returns user to login page and blocks protected routes.
-- Locked/disabled account shows proper error handling.
+Non-secret scenario data is externalized in JSON files:
 
-## Running tests
+- Web login data: `data/web/login.json`
+  - negative password value
+  - expected UI validation message
+- API login data: `data/api/login.json`
+  - negative password value
+  - expected status code
+  - expected error-message regex pattern
+
+## How to execute tests
+
+### Run all tests
+
+```bash
+npm test
+```
+
+### Run only web tests
+
+```bash
+npm run test:web
+```
+
+### Run only API tests
 
 ```bash
 npm run test:api
 ```
 
-Optional:
+### Run tests in headed mode (browser visible)
 
 ```bash
-npx playwright show-report
+npm run test:headed
 ```
 
-## Using Playwright MCP server + Jira to generate test cases
+### Run a specific test file
 
-Use this repeatable workflow:
+```bash
+npx playwright test tests/web/login.web.spec.js
+npx playwright test tests/api/login.api.spec.js
+```
 
-1. **Read Jira ticket with MCP tools**
-   - Pull summary, description, acceptance criteria, priority, labels, linked defects.
-2. **Extract test conditions**
-   - Identify positive, negative, boundary, security, and role/permission scenarios.
-3. **Map ticket requirements to API checks**
-   - For login flows, usually:
-     - Valid credentials (`POST`)
-     - Invalid password/user (`POST` negative)
-     - Token/session retrieval (`GET`)
-     - User profile/settings update (`PUT`)
-     - Logout/session revoke (`DELETE`)
-4. **Generate test cases**
-   - Produce clear test title, preconditions, steps, expected results, and API assertions.
-5. **Implement tests in Playwright**
-   - Convert each case into `test()` blocks and add data-driven coverage where needed.
-   - Split cases by layer: `tests/api/*` and `tests/web/*`.
+### Run a single test by name
 
-### Suggested prompt for MCP
+```bash
+npx playwright test -g "Positive: user logs in successfully"
+npx playwright test -g "POST: create a user"
+```
 
-You can use a prompt like:
+### Run tests by Playwright project
+
+```bash
+npx playwright test --project=web-chromium
+npx playwright test --project=api
+```
+
+## Parallel execution
+
+Playwright supports parallel runs at worker level and project level.
+
+### 1) Run web tests on 2 different browsers in parallel
+
+Add a second web project in `playwright.config.js` (example with Firefox):
+
+```js
+{
+  name: 'web-firefox',
+  testDir: './tests/web',
+  use: {
+    browserName: 'firefox',
+    baseURL: process.env.WEB_BASE_URL || 'https://the-internet.herokuapp.com'
+  }
+}
+```
+
+Then run both browser projects together:
+
+```bash
+npx playwright test tests/web --project=web-chromium --project=web-firefox
+```
+
+Optional: control parallel worker count explicitly:
+
+```bash
+npx playwright test tests/web --project=web-chromium --project=web-firefox --workers=4
+```
+
+What `--workers=4` means:
+
+- Playwright runs up to 4 test workers (parallel processes) at the same time.
+- More workers usually reduce total execution time when tests are independent.
+- If your machine has limited CPU/RAM, too many workers can slow tests or cause instability.
+- Good starting point: set workers close to available CPU cores, then tune from there.
+
+### 2) Run web and API tests in parallel
+
+Run both projects in one command:
+
+```bash
+npx playwright test --project=web-chromium --project=api
+```
+
+Optional: increase workers to speed up CI/local execution:
+
+```bash
+npx playwright test --project=web-chromium --project=api --workers=4
+```
+
+Notes:
+
+- Parallelism increases execution speed but may increase resource usage.
+- Keep tests isolated and independent to avoid flaky behavior in parallel runs.
+- For CI, tune `--workers` based on machine CPU and memory.
+
+## Reporting and artifacts
+
+### Playwright HTML report
+
+Generate/open after run:
+
+```bash
+npm run report:playwright
+```
+
+### Allure report
+
+Generate report:
+
+```bash
+npm run report:allure:generate
+```
+
+Open report:
+
+```bash
+npm run report:allure:open
+```
+
+If report results look stale (old failed tests), regenerate cleanly before opening:
+
+```bash
+npx playwright test
+npm run report:allure:generate
+npm run report:allure:open
+```
+
+## Report details captured
+
+### Web report details
+
+- Step-level execution via `test.step(...)`
+- `web-last-step.png` attached after each test
+- Credential fields are redacted before screenshots are captured
+- On failure:
+  - `web-failure-point.png`
+  - `web-failure-details.json` (error summary)
+- Playwright failure artifacts:
+  - trace
+  - video
+  - failure screenshot
+
+### API report details
+
+For each API test request:
+
+- `*-request.json`
+  - method, full endpoint URL, relative URL, headers, params, body
+- `*-response.json`
+  - full endpoint URL, status, status text, headers, parsed body
+- Positive credential values are redacted from request/response attachments
+- Token-like and secret fields are redacted (e.g., `accessToken`, `refreshToken`, `Authorization`, `cookie`, session-related keys)
+- `api-test-start.json`
+  - test title, start timestamp
+- `api-test-end.json`
+  - test title, status, expected status, end timestamp, failure message (if any)
+
+## Hook architecture (SOLID-friendly)
+
+To avoid repeating hook logic in each spec file:
+
+- `hooks/WebHooks.js` owns web `afterEach` reporting attachments.
+- `hooks/ApiHooks.js` owns API `beforeEach/afterEach` test metadata attachments.
+- `fixtures/webTest.js` registers web hooks once and exports `test`/`expect`.
+- `fixtures/apiTest.js` registers API hooks once and exports `test`/`expect`.
+- Test files now import the right fixture instead of defining duplicate hooks.
+
+### Migration note (old import -> new import)
+
+Use fixture imports so shared hooks are applied automatically.
+
+Old style:
+
+```js
+const { test, expect } = require('@playwright/test');
+```
+
+New style:
+
+```js
+// Web specs
+const { test, expect } = require('../../fixtures/webTest');
+
+// API specs
+const { test, expect } = require('../../fixtures/apiTest');
+```
+
+## MCP + Jira workflow (for test case generation)
+
+Use Playwright MCP + Jira to derive test cases:
+
+1. Read ticket summary/description/acceptance criteria.
+1. Extract positive, negative, boundary, and risk scenarios.
+1. Map each scenario to:
+   - web test coverage in `tests/web/`
+   - API coverage in `tests/api/`
+1. Convert to runnable Playwright tests.
+
+Suggested prompt:
 
 ```text
-Read Jira ticket <TICKET_ID>. Extract acceptance criteria and risks.
-Create API test cases for Login flow using POST, GET, PUT, and DELETE.
-For each test case include: title, objective, preconditions, request, expected status code, and expected response checks.
-Then suggest Playwright test names and execution priority (P0/P1/P2).
+Read Jira ticket <TICKET_ID> and extract acceptance criteria and risks.
+Generate web and API test cases for login flow.
+Include positive and negative scenarios, priorities (P0/P1/P2), and expected outcomes.
+Return suggested Playwright test names and where to place them (tests/web or tests/api).
 ```
-
-For web-specific generation:
-
-```text
-Read Jira ticket <TICKET_ID> for Login page behavior.
-Create Playwright web test cases for positive, negative, validation, and session scenarios.
-For each test include: title, objective, page path, steps, expected web behavior, and priority (P0/P1/P2).
-Then suggest Playwright test names for tests/web/login.web.spec.js.
-```
-
-## Example test case template (from Jira ticket)
-
-Use this template to keep generated test cases consistent:
-
-```text
-Test Case ID: API-LOGIN-001
-Title: Login with valid credentials returns auth token
-Priority: P0
-Preconditions:
-- User account exists and is active
-Request:
-- Method: POST
-- Endpoint: /login
-- Payload: valid email/password
-Expected:
-- Status code: 200
-- Response contains non-empty token
-- Response contains correct user id/email
-```
-
-## Best practices
-
-- Keep API tests deterministic and independent.
-- Avoid coupling test assertions to unstable fields (timestamps, random ids).
-- Use dedicated test accounts and isolated test data.
-- Add negative cases for each endpoint (401/403/404/422).
-- Tag smoke vs regression tests using `test.describe` or naming conventions.
-- Store sensitive values in environment variables, not in source code.
-
-## Next steps
-
-- Add negative login scenarios (`invalid password`, `locked user`, `missing fields`)
-- Add schema validation for response bodies
-- Add page object model for login page (`pages/LoginPage.js`)
-- Add CI pipeline execution (GitHub Actions/Jenkins)
-- Add trace/log artifacts on failure for faster debugging

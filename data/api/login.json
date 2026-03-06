@@ -1,0 +1,7 @@
+{
+  "negative": {
+    "invalidPassword": "wrong-password",
+    "expectedStatus": 400,
+    "expectedMessagePattern": "credentials|username|password"
+  }
+}

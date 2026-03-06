@@ -10,5 +10,12 @@
 *.log.*
 *.sig
 
+node_modules/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+.env
+
 pkg/
 src/

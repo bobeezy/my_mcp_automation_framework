@@ -1,0 +1,6 @@
+{
+  "negative": {
+    "invalidPassword": "invalid-password",
+    "expectedMessage": "Your password is invalid!"
+  }
+}
