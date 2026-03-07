@@ -51,6 +51,8 @@ Playwright + JavaScript test automation framework for:
 
 ```text
 my_mcp_automation_framework/
+  .husky/
+    pre-commit
   data/
     credentials/
       .env.credentials
@@ -75,6 +77,7 @@ my_mcp_automation_framework/
   utils/
     apiReporter.js
     env.js
+  eslint.config.js
   playwright.config.js
   package.json
   README.md
@@ -91,6 +94,12 @@ my_mcp_automation_framework/
 
 ```bash
 npm install
+```
+
+1. Validate code quality with ESLint:
+
+```bash
+npm run lint
 ```
 
 1. Install Playwright browser(s):
@@ -196,6 +205,140 @@ npx playwright test --project=web-chromium
 npx playwright test --project=api
 ```
 
+## Linting (ESLint)
+
+Purpose of ESLint (quick summary):
+
+- Statically analyzes JavaScript code to catch issues before runtime.
+- Enforces consistent coding standards across the project.
+- Helps reduce bugs and improve maintainability for test automation code.
+
+ESLint is configured with:
+
+- Base JavaScript recommended rules (`@eslint/js`)
+- Node.js globals (`globals`)
+- Playwright lint rules for test files (`eslint-plugin-playwright`)
+
+### ESLint setup steps
+
+1. Install lint dependencies:
+
+```bash
+npm i -D eslint @eslint/js globals eslint-plugin-playwright
+```
+
+1. Create/update lint config:
+
+- File: `eslint.config.js`
+- Ensure it includes:
+  - JS recommended rules (`@eslint/js`)
+  - Node globals (`globals`)
+  - Playwright plugin rules for `tests/`, `hooks/`, `fixtures/`
+  - Ignore paths for generated reports/artifacts
+
+1. Add npm scripts in `package.json`:
+
+```json
+{
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  }
+}
+```
+
+1. Run lint and fix issues:
+
+```bash
+npm run lint
+npm run lint:fix
+```
+
+1. (Optional, recommended) add `npm run lint` in CI before test execution.
+
+### Pre-commit lint hook (Husky)
+
+Purpose:
+
+- Automatically runs lint checks before each `git commit`.
+- Prevents commits that introduce lint errors.
+
+Setup steps:
+
+1. Install Husky:
+
+```bash
+npm i -D husky
+```
+
+1. Add/keep this script in `package.json`:
+
+```json
+{
+  "scripts": {
+    "prepare": "husky"
+  }
+}
+```
+
+1. Ensure the hook file exists at `.husky/pre-commit` with:
+
+```sh
+#!/usr/bin/env sh
+npm run lint
+```
+
+1. Activate hooks locally (run once per clone):
+
+```bash
+npm run prepare
+```
+
+When to use:
+
+- Use by default in daily development so lint is validated before each commit.
+- Keep CI lint checks as a second safety layer (`npm run lint` in pipeline).
+
+Lint commands:
+
+```bash
+npm run lint
+npm run lint:fix
+```
+
+### How to confirm lint pass/fail
+
+In your local terminal, after running:
+
+```bash
+npm run lint
+```
+
+check exit code:
+
+```bash
+echo $?
+```
+
+- `0` -> passed
+- non-`0` -> failed
+
+Example fail output pattern:
+
+- `path/to/file.js`
+- line/column
+- rule name (for example `no-undef`)
+- summary like `✖ 1 problem`
+
+With your Husky pre-commit hook:
+
+- If lint fails, commit is blocked and you will see lint errors in terminal.
+- If commit succeeds, lint passed.
+
+Lint config file:
+
+- `eslint.config.js`
+
 ## Parallel execution
 
 Playwright supports parallel runs at worker level and project level.
@@ -276,6 +419,18 @@ Open report:
 
 ```bash
 npm run report:allure:open
+```
+
+Generate and open in one command:
+
+```bash
+npm run report:allure
+```
+
+OR
+
+```bash
+npm run report:allure:generate && npm run report:allure:open
 ```
 
 If report results look stale (old failed tests), regenerate cleanly before opening:

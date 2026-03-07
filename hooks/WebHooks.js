@@ -1,6 +1,7 @@
 class WebHooks {
   static async redactCredentialFields(page) {
     await page.evaluate(() => {
+      const doc = globalThis.document;
       const credentialSelectors = [
         '#username',
         'input[name="username"]',
@@ -11,7 +12,7 @@ class WebHooks {
       ];
 
       for (const selector of credentialSelectors) {
-        const element = document.querySelector(selector);
+        const element = doc.querySelector(selector);
         if (!element || typeof element.value !== 'string') continue;
         element.value = '[REDACTED]';
       }
