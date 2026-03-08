@@ -561,6 +561,47 @@ npm run mcp:playwright
 
 When Playwright MCP opens Jira, sign in once if prompted. Session state is stored in `.playwright-mcp/` so later runs can reuse it.
 
+### 3.1) Jira credentials quick path
+
+Use this quick setup for Jira environment values:
+
+1. `JIRA_BASE_URL`
+   - Open Jira in your browser.
+   - Copy only the domain part before `/jira/...`.
+   - Example for this workspace:
+     - `JIRA_BASE_URL=https://bobymangoua.atlassian.net`
+1. `JIRA_EMAIL`
+   - Use the Atlassian account email you sign in with.
+   - Verify at [Atlassian profile and visibility](https://id.atlassian.com/manage-profile/profile-and-visibility).
+   - Example:
+     - `JIRA_EMAIL=you@example.com`
+1. `JIRA_API_TOKEN`
+   - Go to [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
+   - Click `Create API token`.
+   - Name it like `mcp-jira-local`.
+   - Copy the token (shown once).
+   - Add:
+     - `JIRA_API_TOKEN=<paste-token>`
+
+Put all three values in `data/credentials/.env.credentials`:
+
+```bash
+JIRA_BASE_URL=https://bobymangoua.atlassian.net
+JIRA_EMAIL=your-atlassian-email@example.com
+JIRA_API_TOKEN=your_generated_api_token
+```
+
+Validate credentials quickly:
+
+```bash
+set -a && source data/credentials/.env.credentials && set +a && curl -s -o /tmp/jira_me.json -w "%{http_code}\n" -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$JIRA_BASE_URL/rest/api/3/myself"
+```
+
+Expected result:
+
+- `200` -> credentials are valid
+- `401` or `403` -> check email/token/site access
+
 ### 4) Prompt to read ticket and extract scenarios
 
 ```text
