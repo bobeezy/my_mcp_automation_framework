@@ -1,2 +1,5 @@
 #!/usr/bin/env sh
 npm run lint
+
+#setup Gitleaks secret scanner before commits
+gitleaks detect --source .

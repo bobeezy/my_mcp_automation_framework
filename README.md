@@ -16,7 +16,11 @@ Playwright + JavaScript test automation framework for:
 - Web tests: `tests/web/login.web.spec.js`
   - Positive login with valid credentials
   - Negative login with invalid password
+  - Negative login with invalid username
+  - Negative login with empty password
+  - Edge login with whitespace username + long password
   - `test.step(...)` for step-level traceability in reports
+  - Login step includes full absolute URL for clearer Allure traceability
   - Screenshot attached after each test (last executed step)
   - On failure: failure-point screenshot + failure details attachment
 - Shared web hook registration:
@@ -105,18 +109,19 @@ npm run lint
 1. Install Playwright browser(s):
 
 ```bash
-npx playwright install chromium
+npm run pw:install
 ```
 
-1. Update environment values in `data/credentials/.env.credentials` if needed.
+1. Create/update local environment file at `data/credentials/.env.credentials` if needed.
 
 ## Environment file (`data/credentials/.env.credentials`)
 
 The framework loads environment data from `data/credentials/.env.credentials` by default.
 Credentials are not hardcoded in test files; tests fail fast if required env values are missing.
 Env validation helper is centralized in `utils/env.js` (`getRequiredEnv`) to enforce this behavior.
+This file is local-only and is ignored by git to prevent secret leakage.
 
-Current sample values:
+Sample values:
 
 ```bash
 WEB_BASE_URL=https://the-internet.herokuapp.com
@@ -126,6 +131,11 @@ WEB_LOGIN_PASSWORD=SuperSecretPassword!
 API_BASE_URL=https://dummyjson.com
 API_LOGIN_USERNAME=emilys
 API_LOGIN_PASSWORD=emilyspass
+
+# Jira values (local use)
+JIRA_BASE_URL=https://bobymangoua.atlassian.net
+JIRA_EMAIL=your-atlassian-email@example.com
+JIRA_API_TOKEN=your_generated_api_token
 ```
 
 To run against another environment file, use `ENV_FILE`:
@@ -139,8 +149,9 @@ ENV_FILE=data/credentials/.env.staging.credentials npx playwright test
 Non-secret scenario data is externalized in JSON files:
 
 - Web login data: `data/web/login.json`
-  - negative password value
-  - expected UI validation message
+  - negative credentials/messages (invalid password, invalid username)
+  - generic invalid-message pattern for edge assertions
+  - edge inputs (whitespace username, long password)
 - API login data: `data/api/login.json`
   - negative password value
   - expected status code
@@ -841,3 +852,40 @@ Why it exists:
 - `test:verify` stays fast for day-to-day work.
 - `test:verify:full` is the recovery path when browser cache issues appear.
 - both keep the same lint-first validation pattern.
+
+## Secret scanning with Gitleaks
+
+This project uses `gitleaks` in the pre-commit hook to prevent committing secrets.
+
+Current hook (`.husky/pre-commit`):
+
+```sh
+#!/usr/bin/env sh
+npm run lint
+
+# setup Gitleaks secret scanner before commits
+gitleaks detect --source .
+```
+
+### How it behaves
+
+- On every `git commit`, lint runs first.
+- Then `gitleaks` scans repository content for potential secrets.
+- If leaks are found, commit is blocked.
+
+### Run Gitleaks manually
+
+```bash
+gitleaks detect --source .
+```
+
+Recommended before pushing:
+
+```bash
+npm run lint && gitleaks detect --source . && npm test
+```
+
+### Notes
+
+- Keep real credentials only in local ignored files.
+- If a secret is found, rotate it and remove it from tracked history if needed.

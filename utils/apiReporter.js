@@ -12,6 +12,8 @@ function shouldRedactKey(key) {
   const sensitiveKeyParts = [
     'password',
     'token',
+    'accessToken',
+    'refreshToken',
     'authorization',
     'cookie',
     'set-cookie',
