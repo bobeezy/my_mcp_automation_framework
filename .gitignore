@@ -18,6 +18,7 @@ allure-report/
 .playwright-mcp/
 .playwright-browsers/
 .env
+data/credentials/.env.credentials
 
 pkg/
 src/
