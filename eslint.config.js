@@ -6,6 +6,7 @@ module.exports = [
   {
     ignores: [
       'node_modules/**',
+      '.playwright-browsers/**',
       'playwright-report/**',
       'test-results/**',
       'allure-results/**',

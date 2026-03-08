@@ -1,6 +1,13 @@
 {
   "negative": {
     "invalidPassword": "invalid-password",
-    "expectedMessage": "Your password is invalid!"
+    "invalidUsername": "invalid-username",
+    "expectedInvalidPasswordMessage": "Your password is invalid!",
+    "expectedInvalidUsernameMessage": "Your username is invalid!",
+    "expectedGenericInvalidPattern": "invalid"
+  },
+  "edge": {
+    "usernameWithSpaces": " tomsmith ",
+    "longPassword": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   }
 }

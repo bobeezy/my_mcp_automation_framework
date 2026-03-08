@@ -10,10 +10,13 @@ class LoginPage {
     this.logoutButton = page.locator('a.button.secondary.radius');
   }
 
-  async goto() {
+  getLoginUrl() {
     const baseUrl = getRequiredEnv('WEB_BASE_URL');
-    const loginUrl = new URL('/login', baseUrl).toString();
-    await this.page.goto(loginUrl);
+    return new URL('/login', baseUrl).toString();
+  }
+
+  async goto() {
+    await this.page.goto(this.getLoginUrl());
   }
 
   async login(username, password) {

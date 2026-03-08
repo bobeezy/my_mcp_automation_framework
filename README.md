@@ -520,3 +520,283 @@ Generate web and API test cases for login flow.
 Include positive and negative scenarios, priorities (P0/P1/P2), and expected outcomes.
 Return suggested Playwright test names and where to place them (tests/web or tests/api).
 ```
+
+## Playwright MCP server setup (Jira ticket reading)
+
+Use the official Playwright MCP server to open Jira tickets in the browser, extract acceptance criteria, and generate/implement additional test coverage.
+
+### 1) Cursor MCP server configuration
+
+`settings.json` entry (already configured in this environment):
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--browser",
+        "chrome",
+        "--output-dir",
+        ".playwright-mcp",
+        "--save-session"
+      ],
+      "cwd": "/Users/bobeezy/Workspace/JavaScript/my_mcp_automation_framework"
+    }
+  }
+}
+```
+
+### 2) Optional local run command
+
+You can run the same server from terminal:
+
+```bash
+npm run mcp:playwright
+```
+
+### 3) Login/session guidance for Jira
+
+When Playwright MCP opens Jira, sign in once if prompted. Session state is stored in `.playwright-mcp/` so later runs can reuse it.
+
+### 4) Prompt to read ticket and extract scenarios
+
+```text
+Using Playwright MCP, open Jira ticket https://bobymangoua.atlassian.net/browse/KAN-6.
+Extract requirement and acceptance criteria.
+Return additional negative and edge test scenarios for web login in Given/When/Then format.
+Do not repeat existing scenario: "Negative: user fails login with invalid password".
+```
+
+### 5) Prompt to generate and write test code
+
+```text
+Using extracted scenarios from KAN-6, update tests/web/login.web.spec.js.
+Add only new negative and edge tests not already covered.
+Keep existing test style with test.step blocks and assertions on URL + flash message.
+If needed, update data/web/login.json with deterministic test data.
+```
+
+### 6) VS Code setup (Copilot Chat + MCP)
+
+Use this when you want Playwright MCP available from VS Code chat.
+
+1. Install extensions:
+   - GitHub Copilot
+   - GitHub Copilot Chat
+1. Open VS Code user `settings.json`.
+1. Add the same `mcpServers.playwright` block used above (or merge into existing `mcpServers`).
+1. Reload VS Code.
+1. Open Copilot Chat and run an MCP-aware prompt (examples below).
+
+Minimal config block:
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--browser",
+        "chrome",
+        "--output-dir",
+        ".playwright-mcp",
+        "--save-session"
+      ],
+      "cwd": "/Users/bobeezy/Workspace/JavaScript/my_mcp_automation_framework"
+    }
+  }
+}
+```
+
+### 7) IntelliJ setup (Copilot Chat + MCP)
+
+Use this when you want Playwright MCP available from IntelliJ chat.
+
+1. Install the GitHub Copilot plugin (includes Copilot Chat).
+1. Open IDE settings and locate MCP server/tool configuration (or the MCP-capable chat plugin settings, depending on your IntelliJ setup).
+1. Add a server named `playwright` using the same command/args/cwd from this README.
+1. Restart IntelliJ.
+1. Open Copilot Chat and run MCP-aware prompts.
+
+Recommended Playwright MCP command for IntelliJ MCP settings:
+
+```bash
+npx -y @playwright/mcp@latest --browser chrome --output-dir .playwright-mcp --save-session
+```
+
+### 8) Copilot Chat prompts (all IDEs)
+
+Read Jira ticket and generate scenarios:
+
+```text
+Use Playwright MCP to open https://bobymangoua.atlassian.net/browse/KAN-6.
+Extract acceptance criteria.
+Generate additional negative and edge web login test cases in Given/When/Then format.
+Exclude the existing case: invalid password.
+```
+
+Write code directly in this project:
+
+```text
+Using the generated scenarios from KAN-6, update tests/web/login.web.spec.js.
+Add only new negative and edge tests.
+Keep existing style with test.step, URL assertions, and flash message assertions.
+Update data/web/login.json only if required for deterministic test data.
+```
+
+### 9) Master prompt template (reusable)
+
+Use this template for any Jira story:
+
+```text
+Use Playwright MCP to open Jira ticket: <JIRA_URL_OR_KEY>.
+
+Context:
+- Project path: /Users/bobeezy/Workspace/JavaScript/my_mcp_automation_framework
+- Existing tests to review first: <SPEC_FILES>
+- Existing scenarios to exclude: <EXISTING_SCENARIOS_TO_EXCLUDE>
+
+Tasks:
+1) Extract requirement and acceptance criteria from the ticket.
+2) Return test scenarios in Given/When/Then grouped by:
+   - Positive
+   - Negative
+   - Edge
+3) For each scenario include:
+   - Priority (P0/P1/P2)
+   - Expected result
+   - Suggested test name
+   - Suggested target file path
+4) If requested, implement selected scenarios in code:
+   - Update only approved files
+   - Reuse existing test style and helper patterns
+   - Keep deterministic data in JSON fixtures
+5) After code generation, run lint and targeted tests and report results.
+
+Output format:
+- Section A: Extracted AC
+- Section B: Generated scenarios
+- Section C: Proposed code changes
+- Section D: Verification commands and outcomes
+```
+
+### 10) How to confirm Playwright MCP is connected
+
+Use this checklist:
+
+1. Reload the IDE window after editing MCP settings.
+1. Open MCP servers/tools panel and confirm server name `playwright` is visible.
+1. Run a tiny prompt in chat:
+
+```text
+Use Playwright MCP to open https://bobymangoua.atlassian.net/browse/KAN-6 and return only the ticket summary.
+```
+
+Connected behavior:
+
+- MCP tool/browser actions start
+- Prompt returns live page-derived content (for example ticket summary text)
+
+Not connected behavior:
+
+- chat cannot find/use `playwright` MCP tools
+- prompt returns a tool/server-not-available style error
+
+Quick fallback:
+
+```bash
+npm run mcp:playwright
+```
+
+If this command starts successfully, the Playwright MCP server binary/config is valid.
+
+### 11) Test execution runbook (quick self-check)
+
+Use this sequence before reporting failures:
+
+1. Lint first:
+
+```bash
+npm run lint
+```
+
+2. Confirm browser binaries:
+
+```bash
+npm run pw:install
+```
+
+3. Run web tests:
+
+```bash
+npm run test:web
+```
+
+Note:
+
+- Browser binaries are now pinned to a project-local cache: `.playwright-browsers/`.
+- `npm run test:web` auto-runs `npm run pw:install` first (`pretest:web`) to prevent "Executable doesn't exist" browser-launch failures.
+
+4. Run API tests:
+
+```bash
+npm run test:api
+```
+
+5. If API fails with DNS/network errors (for example `ENOTFOUND`), verify host reachability:
+
+```bash
+curl -I https://dummyjson.com/users/1
+```
+
+6. If web tests stall early, run a single smoke case:
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers npx playwright test tests/web/login.web.spec.js -g "Positive: user logs in successfully" --max-failures=1
+```
+
+7. If Allure still shows old failures, clear stale results then regenerate:
+
+```bash
+rm -rf allure-results allure-report test-results playwright-report && npm test && npm run report:allure
+```
+
+### 12) Verification modes (fast vs full)
+
+#### Fast daily verification
+
+Use this for normal development runs:
+
+```bash
+npm run test:verify
+```
+
+What it does:
+
+1. Runs `npm run lint` to catch static issues first.
+1. Runs `npm test` to execute all Playwright projects (`web` + `api`).
+
+#### Full repair + verification
+
+Use this when browser binaries are broken/missing (for example `Executable doesn't exist`):
+
+```bash
+npm run test:verify:full
+```
+
+What it does:
+
+1. Runs `npm run lint`.
+1. Runs `npm run pw:install` (forced Playwright browser reinstall in `.playwright-browsers`).
+1. Runs `npm test`.
+
+Why it exists:
+
+- `test:verify` stays fast for day-to-day work.
+- `test:verify:full` is the recovery path when browser cache issues appear.
+- both keep the same lint-first validation pattern.
