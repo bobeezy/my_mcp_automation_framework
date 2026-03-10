@@ -1,5 +1,3 @@
-const { getRequiredEnv } = require('../utils/env');
-
 class LoginPage {
   constructor(page) {
     this.page = page;
@@ -10,13 +8,12 @@ class LoginPage {
     this.logoutButton = page.locator('a.button.secondary.radius');
   }
 
-  getLoginUrl() {
-    const baseUrl = getRequiredEnv('WEB_BASE_URL');
-    return new URL('/login', baseUrl).toString();
+  getLoginPath() {
+    return '/login';
   }
 
   async goto() {
-    await this.page.goto(this.getLoginUrl());
+    await this.page.goto(this.getLoginPath());
   }
 
   async login(username, password) {

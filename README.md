@@ -144,6 +144,32 @@ To run against another environment file, use `ENV_FILE`:
 ENV_FILE=data/credentials/.env.staging.credentials npx playwright test
 ```
 
+Additional optional API reliability/performance env variables:
+
+```bash
+# Retry policy (enabled only when API_RETRY_ENABLED=true and TEST_ENV is not production)
+TEST_ENV=local
+API_RETRY_ENABLED=true
+API_RETRY_MAX_ATTEMPTS=2
+API_RETRY_BACKOFF_MS=300
+
+# API response-time assertion threshold in tests (milliseconds)
+API_MAX_RESPONSE_TIME_MS=4000
+```
+
+Defaults used by the framework:
+
+- `TEST_ENV=local` (implicit if not set)
+- `API_RETRY_ENABLED=false` (retries are opt-in)
+- `API_RETRY_MAX_ATTEMPTS=2`
+- `API_RETRY_BACKOFF_MS=300`
+- `API_MAX_RESPONSE_TIME_MS=4000`
+
+Recommended values:
+
+- Local/dev: `API_MAX_RESPONSE_TIME_MS=4000`
+- CI: `API_MAX_RESPONSE_TIME_MS=6000` or `8000` depending on runner/network latency
+
 ## Test data files
 
 Non-secret scenario data is externalized in JSON files:
@@ -447,6 +473,15 @@ npm run report:allure:generate && npm run report:allure:open
 If report results look stale (old failed tests), regenerate cleanly before opening:
 
 ```bash
+npx playwright test
+npm run report:allure:generate
+npm run report:allure:open
+```
+
+If stale failures still appear, remove old artifacts and regenerate:
+
+```bash
+rm -rf allure-results allure-report
 npx playwright test
 npm run report:allure:generate
 npm run report:allure:open
@@ -853,6 +888,17 @@ Why it exists:
 - `test:verify:full` is the recovery path when browser cache issues appear.
 - both keep the same lint-first validation pattern.
 
+### Mac browser architecture caveat
+
+On macOS (especially Apple Silicon), if Playwright downloads wrong-architecture browser binaries
+(example error: `Executable doesn't exist ... chrome-headless-shell-mac-arm64`), reinstall Chromium
+and headless shell for the current machine architecture:
+
+```bash
+rm -rf .playwright-browsers/chromium-1208 .playwright-browsers/chromium_headless_shell-1208
+PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers npx playwright install chromium
+```
+
 ## Secret scanning with Gitleaks
 
 This project uses `gitleaks` in the pre-commit hook to prevent committing secrets.
@@ -889,3 +935,34 @@ npm run lint && gitleaks detect --source . && npm test
 
 - Keep real credentials only in local ignored files.
 - If a secret is found, rotate it and remove it from tracked history if needed.
+
+## Architecture guardrails
+
+Use these guardrails for maintainability and consistent design:
+
+- Fixtures:
+  - Web specs must import `test/expect` from `fixtures/webTest`.
+  - API specs must import `test/expect` from `fixtures/apiTest`.
+
+- Web automation:
+  - Keep page selectors and UI actions inside `pages/` classes.
+  - Specs should focus on scenario flow and assertions, not raw selectors.
+  - Use relative navigation in page objects (example: `page.goto('/login')`) so `baseURL` remains centralized in `playwright.config.js`.
+
+- API automation:
+  - Route all API calls through `clients/` classes (`AuthApiClient`, `UserApiClient`).
+  - Keep request/response reporting and sanitization in `utils/apiReporter.js`.
+  - For persistent APIs, use lifecycle-realistic CRUD (create -> read -> update -> delete with created ID).
+  - For demo/non-persistent APIs (like `dummyjson`), validate create response contract separately and run read/update/delete against known stable IDs.
+
+- Naming:
+  - Files: `*.spec.js` for specs, `*Page.js` for page objects, `*ApiClient.js` for API clients.
+  - Test titles should include operation and intent (example: `POST: create a user`).
+
+- Reliability:
+  - Optional API retry for transient 5xx/network issues is allowed only in non-prod by env policy.
+  - Always assert response-time thresholds with `API_MAX_RESPONSE_TIME_MS`.
+
+- Security:
+  - Never hardcode credentials or tokens in test code.
+  - Keep secrets in `data/credentials/.env.credentials` (gitignored).
