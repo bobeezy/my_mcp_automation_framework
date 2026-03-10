@@ -481,10 +481,13 @@ npm run report:allure:open
 If stale failures still appear, remove old artifacts and regenerate:
 
 ```bash
-rm -rf allure-results allure-report
-npx playwright test
-npm run report:allure:generate
-npm run report:allure:open
+rm -rf allure-results allure-report && npx playwright test && npm run report:allure:generate && npm run report:allure:open
+```
+
+Or run the npm script:
+
+```bash
+npm run report:allure:refresh
 ```
 
 ## Report details captured

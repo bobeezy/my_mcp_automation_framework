@@ -18,7 +18,8 @@
     "report:playwright": "playwright show-report",
     "report:allure:generate": "allure generate ./allure-results --clean -o ./allure-report",
     "report:allure:open": "allure open ./allure-report",
-    "report:allure": "npm run report:allure:generate && npm run report:allure:open"
+    "report:allure": "npm run report:allure:generate && npm run report:allure:open",
+    "report:allure:refresh": "rm -rf allure-results allure-report && PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers npx playwright test && npm run report:allure:generate && npm run report:allure:open"
   },
   "keywords": [],
   "author": "",
