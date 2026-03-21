@@ -1,6 +1,6 @@
 # MCP Automation Framework
 
-Playwright + JavaScript test automation framework for:
+A modern, scalable, and maintainable end-to-end test automation framework built with Playwright and JavaScript, following industry best practices and the Page Object Model (POM) design pattern.
 
 - Web login validation (positive and negative)
 - API login validation (positive and negative)
