@@ -91,6 +91,7 @@ my_mcp_automation_framework/
 
 - Node.js 18+
 - npm
+- Java Runtime (required for Allure report generation)
 
 ## Setup
 
@@ -111,6 +112,8 @@ npm run lint
 ```bash
 npm run pw:install
 ```
+
+This installs both Chromium and Firefox into the local `.playwright-browsers/` cache.
 
 1. Create/update local environment file at `data/credentials/.env.credentials` if needed.
 
@@ -380,25 +383,23 @@ Lint config file:
 
 Playwright supports parallel runs at worker level and project level.
 
-### 1) Run web tests on 2 different browsers in parallel
+### 1) Run web tests on Chromium + Firefox in parallel
 
-Add a second web project in `playwright.config.js` (example with Firefox):
+The repository is already configured with both browser projects:
 
-```js
-{
-  name: 'web-firefox',
-  testDir: './tests/web',
-  use: {
-    browserName: 'firefox',
-    baseURL: process.env.WEB_BASE_URL || 'https://the-internet.herokuapp.com'
-  }
-}
-```
+- `web-chromium`
+- `web-firefox`
 
-Then run both browser projects together:
+Run both browser projects together:
 
 ```bash
 npx playwright test tests/web --project=web-chromium --project=web-firefox
+```
+
+Shortcut command:
+
+```bash
+npm run test:web
 ```
 
 Optional: control parallel worker count explicitly:
@@ -445,6 +446,21 @@ npm run report:playwright
 ```
 
 ### Allure report
+
+Allure CLI requires a Java runtime.
+
+If Java was installed with Homebrew and not visible in your shell yet:
+
+```bash
+export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
+```
+
+To persist for future terminal sessions:
+
+```bash
+echo 'export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
 
 Generate report:
 

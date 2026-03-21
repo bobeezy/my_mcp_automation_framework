@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "AI-assisted test automation framework using **Playwright + JavaScript** and a **Playwright MCP server** workflow to help generate test cases from Jira tickets.",
   "scripts": {
-    "pw:install": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers npx playwright install --force chromium",
+    "pw:install": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers npx playwright install --force chromium firefox",
     "test": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers playwright test",
     "test:verify": "npm run lint && npm test",
     "test:verify:full": "npm run lint && npm run pw:install && npm test",
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.58.2",
+    "@types/node": "^25.5.0",
     "allure-commandline": "^2.37.0",
     "allure-playwright": "^3.5.0",
     "eslint": "^9.39.4",

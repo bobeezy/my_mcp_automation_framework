@@ -37,6 +37,14 @@ module.exports = defineConfig({
       }
     },
     {
+      name: 'web-firefox',
+      testDir: './tests/web',
+      use: {
+        browserName: 'firefox',
+        baseURL: WEB_BASE_URL
+      }
+    },
+    {
       name: 'api',
       testDir: './tests/api',
       use: {
