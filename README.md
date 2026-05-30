@@ -6,6 +6,7 @@ A modern, scalable, and maintainable end-to-end test automation framework built 
 - API login validation (positive and negative)
 - API user CRUD coverage (`POST`, `GET`, `PUT`, `DELETE`)
 - Rich reporting with Playwright HTML + Allure attachments
+- GitHub Copilot AI customisation layer — agent, skills, prompts, guardrails, and formatting rules in `.github/`
 
 ## What is implemented
 
@@ -55,6 +56,37 @@ A modern, scalable, and maintainable end-to-end test automation framework built 
 
 ```text
 my_mcp_automation_framework/
+  .github/                         ← Copilot AI customisation layer
+    README.md                      ← AI layer documentation
+    copilot-instructions.md        ← always-on baseline (auto-loaded by Copilot)
+    pull_request_template.md       ← PR form
+    agents/
+      ai-test-engineer.agent.md    ← custom Copilot agent
+    guardrails/
+      security-guardrails.md
+      security-guardrail-reference.md
+    prompts/
+      generate-page-object.prompt.md
+      find-locator.prompt.md
+      refactor.prompt.md
+      jira-to-feature.md
+    rules/
+      .copilot-commit-message-instructions.md
+      .copilot-issue-title-instructions.md
+      .copilot-pull-request-description-instructions.md
+    skills/
+      api-test-development/SKILL.md
+      browser-page-objects/SKILL.md
+      end-to-end-test-delivery/SKILL.md
+      feature-authoring/SKILL.md
+      mobile-test-development/SKILL.md
+      security-review-and-audit/SKILL.md
+      test-maintenance-and-quality/SKILL.md
+    specifications/
+      findLocator.spec.md
+      jira2Feature.spec.md
+      pageObjectFromHtmlSnippet.spec.md
+      refactor.spec.md
   .husky/
     pre-commit
   data/
@@ -954,6 +986,70 @@ npm run lint && gitleaks detect --source . && npm test
 
 - Keep real credentials only in local ignored files.
 - If a secret is found, rotate it and remove it from tracked history if needed.
+
+## AI customisation layer (`.github/`)
+
+The `.github/` folder is a **GitHub Copilot customisation layer** that teaches AI assistants (Copilot Chat, agent mode, cloud agents) how to work correctly inside this repository — without repeating project conventions in every prompt.
+
+### Why it was added
+
+Without it, Copilot has no knowledge of this project's specific patterns: which files to import from (`fixtures/webTest.js`), which architecture to follow (POM, `callApiWithReport`), which imports are forbidden (`@playwright/test` directly in specs), or how to keep credentials out of source. Every session would require manual re-explanation of the same standards.
+
+### What it contains (24 files)
+
+| File / folder | What it does | How it activates |
+|---------------|-------------|-----------------|
+| `copilot-instructions.md` | Always-on baseline — stack, layout, locator priority, security, all commands | Auto-loaded by Copilot on every session |
+| `pull_request_template.md` | Pre-filled PR form with checklist (secrets, lint, Gitleaks, test evidence) | Auto-loaded by GitHub when opening a PR |
+| `agents/ai-test-engineer.agent.md` | Specialist agent with task-routing logic and done checklist | `@ai-test-engineer <task>` in Copilot agent mode |
+| `guardrails/security-guardrails.md` | Active behavioural security contract (no secrets, redaction rules, safe targets) | Referenced by the agent and security skill at runtime |
+| `guardrails/security-guardrail-reference.md` | Rationale, green patterns, red flags for PR review of `.github/` files | Referenced during manual review |
+| `prompts/generate-page-object.prompt.md` | HTML snippet → `pages/<Name>Page.js` matching `LoginPage.js` conventions | `#file:` in Copilot Chat or prompt picker |
+| `prompts/find-locator.prompt.md` | Element description → best Playwright locator + constructor field + red flags | `#file:` in Copilot Chat |
+| `prompts/refactor.prompt.md` | File path(s) → refactored output, change summary, lint notes | `#file:` in Copilot Chat |
+| `prompts/jira-to-feature.md` | Jira ticket → scenario table → approved spec implementation | `#file:` + MCP server running |
+| `rules/.copilot-commit-message-instructions.md` | Enforces `feat(web):`, `fix(api):`, `chore(config):` conventional commit format | Auto-injected when Copilot generates a commit message |
+| `rules/.copilot-issue-title-instructions.md` | Enforces `Bug:`, `Feature:`, `Refactor:` issue title prefixes | Auto-injected when Copilot generates an issue title |
+| `rules/.copilot-pull-request-description-instructions.md` | Maps the diff to each section of `pull_request_template.md` | Auto-injected when Copilot generates a PR description |
+| `skills/api-test-development/SKILL.md` | `tests/api/*.api.spec.js` + `clients/*ApiClient.js` patterns with code examples | Agent mode, automatic routing |
+| `skills/browser-page-objects/SKILL.md` | `pages/*Page.js` constructor-assigned locators, `module.exports`, no assertions | Agent mode, automatic routing |
+| `skills/feature-authoring/SKILL.md` | Ticket → scenario table approval gate before any code is written | Agent mode or explicit: `Use the feature-authoring skill` |
+| `skills/end-to-end-test-delivery/SKILL.md` | Orchestrates web + API coverage for a requirement in the correct order | Agent mode, automatic routing |
+| `skills/mobile-test-development/SKILL.md` | Playwright `devices[...]` projects in `playwright.config.js` — no Appium | Agent mode or explicit |
+| `skills/test-maintenance-and-quality/SKILL.md` | Flake diagnosis, locator repair, code smell removal | Agent mode or explicit |
+| `skills/security-review-and-audit/SKILL.md` | Self-scan checklist before editing any `.github/` control-plane file | Explicit: `Use the security-review-and-audit skill` |
+| `specifications/pageObjectFromHtmlSnippet.spec.md` | Formal acceptance criteria for `generate-page-object` prompt | Included via `#file:` in prompt frontmatter |
+| `specifications/findLocator.spec.md` | Formal acceptance criteria for `find-locator` prompt | Included via `#file:` in prompt frontmatter |
+| `specifications/refactor.spec.md` | Formal acceptance criteria for `refactor` prompt | Included via `#file:` in prompt frontmatter |
+| `specifications/jira2Feature.spec.md` | Formal acceptance criteria for `jira-to-feature` prompt | Included via `#file:` in prompt frontmatter |
+| `.github/README.md` | Full documentation of the layer — what each file does, why, and how to trigger | Reference / onboarding |
+
+### Quick usage
+
+```
+# Agent mode (Copilot Chat → switch to Agent → type):
+@ai-test-engineer Add API tests for the checkout endpoint
+@ai-test-engineer Fix the flaky logout test in login.web.spec.js
+@ai-test-engineer Use the browser-page-objects skill to add a CheckoutPage
+
+# Prompt commands (Copilot Chat → type):
+#file:.github/prompts/generate-page-object.prompt.md
+Page name: Checkout  |  URL path: /checkout  |  HTML: <input id="email">
+
+#file:.github/prompts/find-locator.prompt.md
+<a class="button secondary radius" href="/logout">Logout</a>
+
+#file:.github/prompts/refactor.prompt.md
+tests/web/login.web.spec.js — steps are missing test.step wrappers
+
+# Jira → tests (MCP server must be running: npm run mcp:playwright)
+#file:.github/prompts/jira-to-feature.md
+https://your-workspace.atlassian.net/browse/TE-123
+```
+
+> See `.github/README.md` for the full explanation of every file, how they connect, and how to keep the layer up to date.
+
+---
 
 ## Architecture guardrails
 
